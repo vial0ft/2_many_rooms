@@ -13,6 +13,12 @@ The main technologies used in the application:
 - **Apache Kafka** for processing user messages
 - **Redis** as a token storage, and a room information storage
 
+## Usage
+
+You can download the project and run locally as is from IDE or build `app.jar` with **Gradle**.
+
+I have added the [docker-compose.yaml](https://github.com/vl0ft/2_many_rooms/blob/main/docker/docker-compose.yaml) file with a description for `kafka` and `redis`
+
 
 ## Future Improvements
 
@@ -20,3 +26,4 @@ The main technologies used in the application:
 - [ ] Documentation
 - [ ] Tests
 - [ ] Web-Client
+- [ ] Containerization
