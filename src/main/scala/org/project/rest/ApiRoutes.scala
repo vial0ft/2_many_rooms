@@ -11,13 +11,12 @@ import akka.http.scaladsl.server.directives.Credentials
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
-import org.project.RoomService
-import org.project.RoomService.{KO, OK, Rooms}
+import org.project.services.RoomService.{KO, OK, Rooms}
 import org.project.model._
 import org.project.services.AuthCheckService.{Auth, SuccessAuthCheck}
 import org.project.services.AuthenticationService.{FailAuth, SuccessAuth}
 import org.project.services.MessageService.{Fail, Sent, Subscribe, TopicSource}
-import org.project.services.{AuthCheckService, AuthenticationService, MessageService}
+import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

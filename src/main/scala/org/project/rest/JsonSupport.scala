@@ -1,7 +1,7 @@
 package org.project.rest
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import org.project.RoomService.{Failed, Rooms, Status, Successful}
+import org.project.services.RoomService.{Failed, Rooms, Status, Successful}
 import org.project.model.{AuthUserContext, MessageBody, Room, User}
 import spray.json.{DeserializationException, JsString, JsValue, RootJsonFormat}
 

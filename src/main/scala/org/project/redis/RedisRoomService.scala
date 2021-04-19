@@ -2,7 +2,7 @@ package org.project.redis
 
 import com.redis.RedisClient
 import com.typesafe.config.Config
-import org.project.RoomService.Rooms
+import org.project.services.RoomService.Rooms
 import org.project.model.Room
 
 import scala.language.implicitConversions

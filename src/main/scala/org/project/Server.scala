@@ -1,14 +1,13 @@
 package org.project
 
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior, PostStop}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.ws.WebSocketRequest
 import com.typesafe.config.Config
 import org.project.redis.{RedisAuthService, RedisRoomService}
 import org.project.rest.ApiRoutes
-import org.project.services.{AuthCheckService, AuthenticationService, MessageService}
+import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}

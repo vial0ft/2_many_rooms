@@ -1,4 +1,4 @@
-package org.project
+package org.project.services
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
