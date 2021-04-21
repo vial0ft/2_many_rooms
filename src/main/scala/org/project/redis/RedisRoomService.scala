@@ -20,7 +20,6 @@ object RedisRoomService {
     val client = new RedisClient(host, port)
     client.flushdb
 
-
     new RedisRoomService(client)
   }
 }

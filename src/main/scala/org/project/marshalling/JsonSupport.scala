@@ -23,13 +23,6 @@ trait JsonSupport extends SprayJsonSupport {
     }
   }
 
-  implicit object UserFormat extends RootJsonFormat[User] {
-
-    override def read(json: JsValue): User = userFormat.read(json)
-
-    override def write(obj: User): JsValue = userFormat.write(obj)
-  }
-
   implicit val userFormat: RootJsonFormat[User] = jsonFormat1(User)
   implicit val usersSetFormat: RootJsonFormat[collection.Set[User]] = setFormat(userFormat)
   implicit val msgFormat: RootJsonFormat[MessageBody] = jsonFormat1(MessageBody)

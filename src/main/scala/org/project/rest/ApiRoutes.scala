@@ -58,6 +58,8 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
     Route.seal {
       authenticateOAuth2Async(realm = "secure site", check) { user =>
         path("")(roomsRoute(user)) ~
+          path("r" / Segment / "enter") { room => enterRoom(user, Room(room)) } ~
+          path("r" / Segment / "exit") { room => exitRoom(user, Room(room)) } ~
           path("r" / Segment / "events") { room => messages(Room(room)) } ~
           path("r" / Segment) { room => roomRoute(user, Room(room)) }
       }
@@ -75,7 +77,6 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
       }
     }
   }
-
 
   def roomsRoute(ctx: AuthUserContext): Route = {
     concat(
@@ -102,39 +103,43 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
     )
   }
 
+  def enterRoom(ctx: AuthUserContext, toRoom: Room): Route = {
+    post {
+      log.info("enter to Room")
+      val response: Future[RoomService.Response] = roomsActor.ask(RoomService.AddUserToRoom(ctx.user, toRoom, _))
+      onSuccess(response) {
+        case OK(room) => complete(StatusCodes.OK)
+        case KO(reason) => complete(StatusCodes.InternalServerError, reason)
+        case _ => complete(StatusCodes.InternalServerError)
+      }
+    }
+  }
+
+  def exitRoom(ctx: AuthUserContext, fromRoom: Room): Route = {
+    post {
+      log.info("exit from Room")
+      val response: Future[RoomService.Response] = roomsActor.ask(RoomService.ExitUserFromRoom(ctx.user, fromRoom, _))
+      onSuccess(response) {
+        case OK(room) => complete(StatusCodes.OK)
+        case KO(reason) => complete(StatusCodes.InternalServerError, reason)
+        case _ => complete(StatusCodes.InternalServerError)
+      }
+    }
+  }
+
   def roomRoute(ctx: AuthUserContext, toRoom: Room): Route = {
-    concat(
-      patch {
-        log.info("enter to Room")
-        val response: Future[RoomService.Response] = roomsActor.ask(RoomService.AddUserToRoom(ctx.user, toRoom, _))
+    post {
+      log.info("sent msg")
+      entity(as[MessageBody]) { msgBody =>
+        val response: Future[MessageService.MessageResponse] = msgActor
+          .ask(MessageService.SendMessage(toRoom, Message(msgBody.text, ctx.user.name), _))
         onSuccess(response) {
-          case OK(room) => complete(StatusCodes.OK)
-          case KO(reason) => complete(StatusCodes.InternalServerError, reason)
+          case Sent => complete(StatusCodes.OK)
+          case Fail(reason) => complete(StatusCodes.InternalServerError, reason)
           case _ => complete(StatusCodes.InternalServerError)
         }
-      },
-      delete {
-        log.info("leave the room")
-        val response: Future[RoomService.Response] = roomsActor.ask(RoomService.ExitUserFromRoom(ctx.user, toRoom, _))
-        onSuccess(response) {
-          case OK(room) => complete(StatusCodes.OK)
-          case KO(reason) => complete(StatusCodes.InternalServerError, reason)
-          case _ => complete(StatusCodes.InternalServerError)
-        }
-      },
-      post {
-        log.info("sent msg")
-        entity(as[MessageBody]) { msgBody =>
-          val response: Future[MessageService.MessageResponse] = msgActor
-            .ask(MessageService.SendMessage(toRoom, Message(msgBody.text, ctx.user.name), _))
-          onSuccess(response) {
-            case Sent => complete(StatusCodes.OK)
-            case Fail(reason) => complete(StatusCodes.InternalServerError, reason)
-            case _ => complete(StatusCodes.InternalServerError)
-          }
-        }
-      },
-    )
+      }
+    }
   }
 
   def messages(room: Room): Route = {
