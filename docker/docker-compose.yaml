@@ -37,12 +37,6 @@ services:
     container_name: redis_rooms
     ports:
       - "6379:6379"
-  redis_users:
-    image: redis:6.2.1-alpine
-    hostname: redis_users
-    container_name: redis_users
-    ports:
-      - "6380:6379"
       
       
       
