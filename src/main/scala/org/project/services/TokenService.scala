@@ -5,7 +5,7 @@ import org.project.marshalling.JsonSupport
 import org.project.model.User
 import pdi.jwt.JwtAlgorithm.HS256
 import pdi.jwt.algorithms.JwtHmacAlgorithm
-import pdi.jwt.{JwtAlgorithm, JwtClaim, JwtSprayJson}
+import pdi.jwt.{JwtClaim, JwtSprayJson}
 import spray.json._
 
 import java.time.Instant
@@ -20,14 +20,10 @@ object TokenService {
 
     new TokenService(secret, HS256, expireSec)
   }
-
-  // TODO: Base64 coded token
-
 }
 
 class TokenService(secret: String, algorithm: JwtHmacAlgorithm, expireSec: Long) extends JsonSupport {
-
-
+  
   def validate(token: String) = {
     JwtSprayJson.validate(token,secret,Seq(algorithm))
     token
