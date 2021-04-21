@@ -4,18 +4,16 @@ import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.sse.ServerSentEvent
-import akka.http.scaladsl.model.ws.TextMessage
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.Credentials
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
-import org.project.services.RoomService.{KO, OK, Rooms}
+import org.project.marshalling.JsonSupport
 import org.project.model._
 import org.project.services.AuthCheckService.{Auth, SuccessAuthCheck}
 import org.project.services.AuthenticationService.{FailAuth, SuccessAuth}
 import org.project.services.MessageService.{Fail, Sent, Subscribe, TopicSource}
+import org.project.services.RoomService.{KO, OK, Rooms}
 import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService}
 
 import scala.concurrent.Future
@@ -68,10 +66,10 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
   lazy val userAuth: Route = {
     post {
       entity(as[User]) { user =>
-        log.info(s"auth user ${user.name}")
-        val tokenResponse = authActor.ask(AuthenticationService.Auth(user.name, _))
+        log.info(s"auth user $user")
+        val tokenResponse = authActor.ask(AuthenticationService.Auth(user, _))
         onSuccess(tokenResponse) {
-          case SuccessAuth(token) => complete(AuthUserContext(user.name, token))
+          case SuccessAuth(userAuth) => complete(StatusCodes.OK, userAuth)
           case FailAuth(reason) => complete(StatusCodes.Unauthorized, reason)
         }
       }
@@ -79,7 +77,7 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
   }
 
 
-  def roomsRoute(user: AuthUserContext): Route = {
+  def roomsRoute(ctx: AuthUserContext): Route = {
     concat(
       get {
         log.info("get Rooms")
@@ -93,7 +91,7 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
       post {
         log.info("create Room")
         entity(as[Room]) { room =>
-          val response: Future[RoomService.Response] = roomsActor.ask(RoomService.CreateRoom(room, _))
+          val response: Future[RoomService.Response] = roomsActor.ask(RoomService.CreateRoom(ctx.user, room, _))
           onSuccess(response) {
             case OK(room) => complete(room)
             case KO(reason) => complete(StatusCodes.InternalServerError, reason)
@@ -104,11 +102,20 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
     )
   }
 
-  def roomRoute(user: AuthUserContext, toRoom: Room): Route = {
+  def roomRoute(ctx: AuthUserContext, toRoom: Room): Route = {
     concat(
-      get {
+      patch {
         log.info("enter to Room")
-        val response: Future[RoomService.Response] = roomsActor.ask(RoomService.AddUserToRoom(toRoom, _))
+        val response: Future[RoomService.Response] = roomsActor.ask(RoomService.AddUserToRoom(ctx.user, toRoom, _))
+        onSuccess(response) {
+          case OK(room) => complete(StatusCodes.OK)
+          case KO(reason) => complete(StatusCodes.InternalServerError, reason)
+          case _ => complete(StatusCodes.InternalServerError)
+        }
+      },
+      delete {
+        log.info("leave the room")
+        val response: Future[RoomService.Response] = roomsActor.ask(RoomService.ExitUserFromRoom(ctx.user, toRoom, _))
         onSuccess(response) {
           case OK(room) => complete(StatusCodes.OK)
           case KO(reason) => complete(StatusCodes.InternalServerError, reason)
@@ -119,7 +126,7 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
         log.info("sent msg")
         entity(as[MessageBody]) { msgBody =>
           val response: Future[MessageService.MessageResponse] = msgActor
-            .ask(MessageService.SendMessage(toRoom, Message(msgBody.text, user.name), _))
+            .ask(MessageService.SendMessage(toRoom, Message(msgBody.text, ctx.user.name), _))
           onSuccess(response) {
             case Sent => complete(StatusCodes.OK)
             case Fail(reason) => complete(StatusCodes.InternalServerError, reason)

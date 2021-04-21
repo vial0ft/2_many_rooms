@@ -1,8 +1,8 @@
-package org.project.rest
+package org.project.marshalling
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import org.project.services.RoomService.{Failed, Rooms, Status, Successful}
 import org.project.model.{AuthUserContext, MessageBody, Room, User}
+import org.project.services.RoomService.{Failed, Rooms, Status, Successful}
 import spray.json.{DeserializationException, JsString, JsValue, RootJsonFormat}
 
 trait JsonSupport extends SprayJsonSupport {
@@ -23,7 +23,15 @@ trait JsonSupport extends SprayJsonSupport {
     }
   }
 
+  implicit object UserFormat extends RootJsonFormat[User] {
+
+    override def read(json: JsValue): User = userFormat.read(json)
+
+    override def write(obj: User): JsValue = userFormat.write(obj)
+  }
+
   implicit val userFormat: RootJsonFormat[User] = jsonFormat1(User)
+  implicit val usersSetFormat: RootJsonFormat[collection.Set[User]] = setFormat(userFormat)
   implicit val msgFormat: RootJsonFormat[MessageBody] = jsonFormat1(MessageBody)
   implicit val userCtxFormat: RootJsonFormat[AuthUserContext] = jsonFormat2(AuthUserContext)
   implicit val roomFormat: RootJsonFormat[Room] = jsonFormat1(Room)

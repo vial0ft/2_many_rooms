@@ -5,9 +5,9 @@ import akka.actor.typed.{ActorSystem, Behavior, PostStop}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import com.typesafe.config.Config
-import org.project.redis.{RedisAuthService, RedisRoomService}
+import org.project.redis.RedisRoomService
 import org.project.rest.ApiRoutes
-import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService}
+import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService, TokenService}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -30,12 +30,12 @@ object Server {
     implicit val system: ActorSystem[Nothing] = ctx.system
 
     val roomRedisService: RedisRoomService = RedisRoomService(config)
-    val redisAuthService: RedisAuthService = RedisAuthService(config)
     val kafka: KafkaHelper = KafkaHelper(config)
+    val tokenService: TokenService = TokenService(config)
 
     val roomsService = ctx.spawn(RoomService(roomRedisService), "RoomsService")
-    val check = ctx.spawn(AuthCheckService(redisAuthService), "AuthCheckService")
-    val authService = ctx.spawn(AuthenticationService(redisAuthService), "AuthenticationService")
+    val check = ctx.spawn(AuthCheckService(tokenService), "AuthCheckService")
+    val authService = ctx.spawn(AuthenticationService(tokenService), "AuthenticationService")
     val msgService = ctx.spawn(MessageService(kafka), "MessageService")
 
     val routes = new ApiRoutes(roomsService, check, authService, msgService)
