@@ -11,7 +11,7 @@ Each user in the room can receive messages from other users via **Server-Sent-Ev
 The main technologies used in the application:
 - **Akka**: Actors, Http and a little Streams
 - **Apache Kafka** for processing user messages
-- **Redis** as a token storage, and a room information storage
+- **Redis** as a rooms' visitors storage
 
 ## Usage
 
