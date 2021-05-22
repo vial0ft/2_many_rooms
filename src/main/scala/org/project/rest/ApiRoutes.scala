@@ -10,11 +10,13 @@ import akka.http.scaladsl.server.directives.Credentials
 import akka.util.Timeout
 import org.project.marshalling.JsonSupport
 import org.project.model._
-import org.project.services.AuthCheckService.{Auth, SuccessAuthCheck}
-import org.project.services.AuthenticationService.{FailAuth, SuccessAuth}
-import org.project.services.MessageService.{Fail, Sent, Subscribe, TopicSource}
-import org.project.services.RoomService.{KO, OK, Rooms}
-import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService}
+import org.project.services.auth.AuthCheckService.{Auth, SuccessAuthCheck}
+import org.project.services.auth.AuthenticationService.{FailAuth, SuccessAuth}
+import org.project.services.msgs.MessageService.{Fail, Sent, Subscribe, TopicSource}
+import org.project.services.rooms.RoomService.{KO, OK, Rooms}
+import org.project.services.auth.{AuthCheckService, AuthenticationService}
+import org.project.services.msgs.MessageService
+import org.project.services.rooms.RoomService
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -60,7 +62,7 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
         path("")(roomsRoute(user)) ~
           path("r" / Segment / "enter") { room => enterRoom(user, Room(room)) } ~
           path("r" / Segment / "exit") { room => exitRoom(user, Room(room)) } ~
-          path("r" / Segment / "events") { room => messages(Room(room)) } ~
+          path("r" / Segment / "events") { room => messages(user.user, Room(room)) } ~
           path("r" / Segment) { room => roomRoute(user, Room(room)) }
       }
     }
@@ -90,8 +92,9 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
         }
       },
       post {
-        log.info("create Room")
+
         entity(as[Room]) { room =>
+          log.info("create Room {}", room)
           val response: Future[RoomService.Response] = roomsActor.ask(RoomService.CreateRoom(ctx.user, room, _))
           onSuccess(response) {
             case OK(room) => complete(room)
@@ -142,9 +145,9 @@ class ApiRoutes(roomsActor: ActorRef[RoomService.Command],
     }
   }
 
-  def messages(room: Room): Route = {
+  def messages(user: User, room: Room): Route = {
     get {
-      val flow = msgActor.ask(Subscribe(room, _))
+      val flow = msgActor.ask(Subscribe(user, room, _))
       onSuccess(flow) {
         case TopicSource(source) => complete(source.map(msg => ServerSentEvent(msg)))
         case _ => reject

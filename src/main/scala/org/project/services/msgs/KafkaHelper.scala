@@ -1,4 +1,4 @@
-package org.project
+package org.project.services.msgs
 
 import akka.Done
 import akka.actor.typed.ActorSystem
@@ -10,7 +10,7 @@ import com.typesafe.config.Config
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializer}
-import org.project.model.{Message, Room}
+import org.project.model.{Message, Room, User}
 import spray.json.{CompactPrinter, RootJsonFormat}
 
 import scala.concurrent.Future
@@ -26,7 +26,6 @@ object KafkaHelper {
       .withBootstrapServers(bootstrapServer)
       .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
       .withProperty(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "5000")
-      .withGroupId("2-many-rooms-app")
 
     val producerSettings: ProducerSettings[String, String] = ProducerSettings(system, new StringSerializer, new StringSerializer)
       .withBootstrapServers(bootstrapServer)
@@ -55,8 +54,8 @@ class KafkaHelper(consumerSettings: ConsumerSettings[String, String],
       .runWith(Producer.plainSink(settingsWithProducer))
   }
 
-  def getTopicSource(room: Room): Source[String, Consumer.Control] = {
-    Consumer.plainSource(consumerSettings, Subscriptions.topics(room.name))
+  def getTopicSource(user: User, room: Room): Source[String, Consumer.Control] = {
+    Consumer.plainSource(consumerSettings.withGroupId(user.name), Subscriptions.topics(room.name))
       .map(consumerRecord => consumerRecord.value())
   }
 }
