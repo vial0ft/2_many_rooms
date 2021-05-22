@@ -5,9 +5,11 @@ import akka.actor.typed.{ActorSystem, Behavior, PostStop}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import com.typesafe.config.Config
-import org.project.redis.RedisRoomService
 import org.project.rest.ApiRoutes
-import org.project.services.{AuthCheckService, AuthenticationService, MessageService, RoomService, TokenService}
+import org.project.services.auth.{AuthCheckService, AuthenticationService, TokenService}
+import org.project.services.msgs.{KafkaHelper, MessageService}
+import org.project.services.rooms.redis.RedisRoomService
+import org.project.services.rooms.RoomService
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}

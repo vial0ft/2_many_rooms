@@ -1,4 +1,4 @@
-package org.project.services
+package org.project.services.auth
 
 import com.typesafe.config.Config
 import org.project.marshalling.JsonSupport
@@ -9,6 +9,7 @@ import pdi.jwt.{JwtClaim, JwtSprayJson}
 import spray.json._
 
 import java.time.Instant
+import scala.util.{Failure, Success, Try}
 
 object TokenService {
 
@@ -23,10 +24,12 @@ object TokenService {
 }
 
 class TokenService(secret: String, algorithm: JwtHmacAlgorithm, expireSec: Long) extends JsonSupport {
-  
-  def validate(token: String) = {
-    JwtSprayJson.validate(token,secret,Seq(algorithm))
-    token
+
+  def validate(token: String): Try[String] = {
+    for {
+      _ <- Try(JwtSprayJson.validate(token, secret, Seq(algorithm)))
+      t <- Success(token)
+    } yield t
   }
 
   def createToken(user: User): String = {
@@ -40,14 +43,17 @@ class TokenService(secret: String, algorithm: JwtHmacAlgorithm, expireSec: Long)
     JwtSprayJson.encode(claim, secret, algorithm)
   }
 
-  def getUser(token: String) = {
+  def getUser(token: String): Try[User] = {
+    def tryGetUser(claim: JwtClaim): Try[User] = {
+      if (claim.expiration.exists(expireSec => expireSec < Instant.now().getEpochSecond)) {
+        Failure(new Exception("token had expired"))
+      }
+      Success(userFormat.read(claim.content.parseJson))
+    }
 
-    JwtSprayJson.decode(token,secret,Seq(algorithm))
-      .map(claim => {
-        if (claim.expiration.exists(expireSec => expireSec < Instant.now().getEpochSecond)) {
-          throw new Exception("token had expired")
-        }
-        userFormat.read(claim.content.parseJson)
-      })
+    for {
+      claim <- JwtSprayJson.decode(token, secret, Seq(algorithm))
+      user <- tryGetUser(claim)
+    } yield user
   }
 }

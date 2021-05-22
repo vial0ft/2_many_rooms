@@ -1,4 +1,4 @@
-package org.project.services
+package org.project.services.auth
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
@@ -16,11 +16,12 @@ object AuthenticationService {
 
   final case class Auth(name: User, replyTo: ActorRef[AuthenticationResponse]) extends AuthenticationCommand
 
-  def apply(tokenService: TokenService)(implicit system: ActorSystem[_]): Behavior[AuthenticationCommand] = Behaviors.receiveMessage {
-    case Auth(user, replyTo) =>
-      val token = tokenService.createToken(user)
-      replyTo ! SuccessAuth(AuthUserContext(user, token))
-      Behaviors.same
-    case _ => Behaviors.same
-  }
+  def apply(tokenService: TokenService)(implicit system: ActorSystem[_]): Behavior[AuthenticationCommand] =
+    Behaviors.receiveMessage {
+      case Auth(user, replyTo) =>
+        val token = tokenService.createToken(user)
+        replyTo ! SuccessAuth(AuthUserContext(user, token))
+        Behaviors.same
+      case _ => Behaviors.same
+    }
 }

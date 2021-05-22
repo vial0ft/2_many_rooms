@@ -1,10 +1,11 @@
-package org.project.redis
+package org.project.services.rooms.redis
 
 import com.redis.RedisClient
 import com.typesafe.config.Config
 import org.project.marshalling.JsonSupport
 import org.project.model.{Room, User}
-import org.project.services.RoomService.Rooms
+import org.project.services.rooms.RoomService.Rooms
+import org.project.services.rooms.redis.RedisRoomService._listStr2Rooms
 import spray.json._
 
 import scala.language.implicitConversions
@@ -26,8 +27,6 @@ object RedisRoomService {
 
 
 class RedisRoomService(_r: RedisClient) extends JsonSupport {
-
-  import org.project.redis.RedisRoomService._listStr2Rooms
 
   def getRooms(): Rooms = {
     _r.keys()
