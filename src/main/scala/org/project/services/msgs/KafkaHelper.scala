@@ -1,11 +1,11 @@
 package org.project
 
+import akka.Done
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.model.DateTime
-import akka.http.scaladsl.model.sse.ServerSentEvent
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.kafka.{ConsumerSettings, ProducerSettings, Subscriptions}
-import akka.stream.scaladsl.{BroadcastHub, Sink, Source}
+import akka.stream.scaladsl.Source
 import com.typesafe.config.Config
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -13,9 +13,11 @@ import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializ
 import org.project.model.{Message, Room}
 import spray.json.{CompactPrinter, RootJsonFormat}
 
+import scala.concurrent.Future
+
 object KafkaHelper {
 
-   // Gets the host and a port from the configuration
+  // Gets the host and a port from the configuration
 
   def apply(config: Config)(implicit system: ActorSystem[_]): KafkaHelper = {
     val bootstrapServer = config.getString("kafka.bootstrap.servers")
@@ -46,7 +48,7 @@ class KafkaHelper(consumerSettings: ConsumerSettings[String, String],
 
   implicit val msgFormat: RootJsonFormat[Message] = jsonFormat2(Message)
 
-  def pushMsg(room: Room, msg: Message) = {
+  def pushMsg(room: Room, msg: Message): Future[Done] = {
     Source.single(msg)
       .map(msg => CompactPrinter(msgFormat.write(msg)))
       .map(value => new ProducerRecord[String, String](room.name, DateTime.now.toIsoDateTimeString(), value))

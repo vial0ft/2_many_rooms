@@ -1,4 +1,4 @@
-package org.project.redis
+package org.project.services.redis
 
 import com.redis.RedisClient
 import com.typesafe.config.Config
@@ -26,8 +26,6 @@ object RedisRoomService {
 
 
 class RedisRoomService(_r: RedisClient) extends JsonSupport {
-
-  import org.project.redis.RedisRoomService._listStr2Rooms
 
   def getRooms(): Rooms = {
     _r.keys()

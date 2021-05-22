@@ -1,7 +1,7 @@
 package org.project.services
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.stream.scaladsl.Source
 import org.project.KafkaHelper
 import org.project.model.{Message, Room}
@@ -14,7 +14,7 @@ object MessageService {
 
   sealed trait MessageResponse
 
-  final case class TopicSource(source: Source[String,_]) extends MessageResponse
+  final case class TopicSource(source: Source[String, _]) extends MessageResponse
 
   case object Sent extends MessageResponse
 
@@ -26,18 +26,21 @@ object MessageService {
 
   final case class Subscribe(room: Room, replyTo: ActorRef[MessageResponse]) extends MessageCommand
 
-  def apply(kafka: KafkaHelper)(implicit system: ActorSystem[_]): Behavior[MessageCommand] = Behaviors.receiveMessage {
+  def apply(kafka: KafkaHelper): Behavior[MessageCommand] =
+    Behaviors.receive { (ctx, msg) =>
 
-    case SendMessage(room, msg, replyTo) =>
-      kafka.pushMsg(room, msg)
-        .onComplete {
-          case Success(value) => replyTo ! Sent
-          case Failure(exception) => replyTo ! Fail(exception.getMessage)
-        }
-      Behaviors.same
-    case Subscribe(room, replyTo) => {
-      replyTo ! TopicSource(kafka.getTopicSource(room))
-      Behaviors.same
+      msg match {
+        case SendMessage(room, msg, replyTo) =>
+          kafka.pushMsg(room, msg)
+            .onComplete {
+              case Success(value) => replyTo ! Sent
+              case Failure(exception) => replyTo ! Fail(exception.getMessage)
+            }
+          Behaviors.same
+        case Subscribe(room, replyTo) =>
+          ctx.spawn()
+          replyTo ! TopicSource(kafka.getTopicSource(room))
+          Behaviors.same
+      }
     }
-  }
 }
